@@ -1,0 +1,135 @@
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.footer {
+  background-color: #f4f4f4;
+  color: #333;
+  text-align: center;
+  padding: 1rem;
+  margin-top: auto; /* push footer to bottom if your layout allows */
+}
+
+.header {
+  background-color: #282c34;
+  color: white;
+  padding: 1rem;
+}
+
+.topNav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* responsive */
+}
+
+.navList {
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+  margin: 0;
+  padding: 0;
+}
+
+.navList li a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.navIcons {
+  display: flex;
+  list-style: none;
+  gap: 1.2rem;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+  font-size: 1rem;
+}
+
+.navIcons a {
+  color: white;
+  font-size: 1.2rem;
+}
+
+.searchBar {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.searchBar input {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  width: 250px;
+}
+
+.searchBtn {
+  padding: 0.5rem 1rem;
+  background-color: #61dafb;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  color: #000;
+}
+
+/* Notifications styling */
+.notificationBox {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: white;
+  box-shadow: 0 0 8px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  z-index: 10000;
+  padding: 10px;
+}
+
+.notificationItem {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background-color: #eee;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notificationItem:hover {
+  background-color: #ddd;
+}
+
+/* ChatBox styles */
+.chatOverlay {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 320px;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  border-radius: 8px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+}

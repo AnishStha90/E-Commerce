@@ -1,0 +1,135 @@
+/* Hero Section */
+.hero {
+  text-align: center;
+  padding: 3rem 1rem;
+  background-color: #282c34;
+  color: white;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.shopNowBtn {
+  background-color: #61dafb;
+  border: none;
+  color: #282c34;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.shopNowBtn:hover {
+  background-color: #21a1f1;
+  color: white;
+}
+
+/* Product Grid */
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.productCard {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  transition: box-shadow 0.3s ease;
+  background-color: white;
+}
+
+.productCard:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.productCard img {
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.addToCartBtn {
+  background-color: #282c34;
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.addToCartBtn:hover {
+  background-color: #61dafb;
+  color: #282c34;
+}
+
+/* Flash Sale - 1 column list */
+.flashSale {
+  padding: 2rem 1rem;
+  background-color: #fff0f0;
+  margin-bottom: 2rem;
+  max-width: 300px; /* narrow column */
+  margin-left: auto; /* right align, adjust as needed */
+  margin-right: auto;
+}
+
+.flashSale h2 {
+  color: #d32f2f;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.flashSaleList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.flashSaleCard {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+/* Price styles */
+.originalPrice {
+  text-decoration: line-through;
+  color: #888;
+  margin-right: 0.5rem;
+}
+
+.discountedPrice {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+/* Main product grid 4 columns x 2 rows */
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 columns */
+  grid-auto-rows: auto;
+  gap: 1.5rem;
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.productCard {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+
