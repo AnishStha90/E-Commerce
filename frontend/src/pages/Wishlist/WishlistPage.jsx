@@ -1,17 +1,16 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { WishlistContext } from "../../context/WishlistContext";
+import { useWishlist } from "../../context/WishlistContext";
 import { getProducts } from "../../api/productApi";
 import "../../assets/styles/wishlist.css";
 
 export default function WishlistPage() {
-  const { wishlist, removeItem, loading: wishlistLoading } = useContext(WishlistContext);
+  const { wishlist, removeItem, loading: wishlistLoading } = useWishlist();
   const [products, setProducts] = useState([]);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
-  const userId = user?.id; // ✅ use id, not _id
-
+  const userId = user?.id;
   const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
@@ -60,7 +59,7 @@ export default function WishlistPage() {
           <div
             className="wishlistItem"
             key={item._id}
-            onClick={() => navigate(`/productDetail/${item._id}`)}
+            onClick={() => navigate(`/product/${item._id}`)}
           >
             <img
               src={

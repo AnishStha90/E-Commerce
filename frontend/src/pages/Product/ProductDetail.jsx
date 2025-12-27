@@ -1,234 +1,230 @@
 // src/pages/Product/ProductDetail.jsx
-import React, { useEffect, useState, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getProductById } from '../../api/productApi';
-import { WishlistContext } from '../../context/WishlistContext';
-import { addToCart } from '../../api/cartApi'; // import cart API
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { getProductById } from "../../api/productApi";
+import { useWishlist } from "../../context/WishlistContext";
+import { useCart } from "../../context/CartContext";
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
-  const { wishlist, addItem, removeItem, loading: wishlistLoading } = useContext(WishlistContext);
+  const { wishlist, addItem, removeItem, loading: wishlistLoading } = useWishlist();
+  const { addItem: addCartItem } = useCart();
+  const BASE_URL = "http://localhost:5000";
 
-  const navigate = useNavigate();
-  const BASE_URL = 'http://localhost:5000';
-
-  const user = localStorage.getItem('user');
+  const user = localStorage.getItem("user");
   const userId = user ? JSON.parse(user).id : null;
 
   useEffect(() => {
+    setProduct(null);
+    setLoading(true);
+    setError(null);
+
     const fetchProduct = async () => {
       try {
-        setLoading(true);
         const data = await getProductById(id);
         setProduct(data);
       } catch (err) {
-        console.error(err);
-        setError('Failed to load product.');
+        setError("Failed to load product.");
       } finally {
         setLoading(false);
       }
     };
+
     fetchProduct();
+    window.scrollTo(0, 0);
   }, [id]);
 
   const getImageUrl = (img) => {
-    if (!img) return 'https://via.placeholder.com/400x300?text=No+Image';
-    const path = typeof img === 'string' ? img : img.url;
-    return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    if (!img) return "https://via.placeholder.com/400x300?text=No+Image";
+    const path = typeof img === "string" ? img : img.url;
+    return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
   };
 
+  const redirectToLogin = () => {
+    navigate("/login", { state: { from: `/product/${id}` } });
+  };
+
+  const isInWishlist = product && Array.isArray(wishlist)
+    ? wishlist.includes(product._id)
+    : false;
+
   const handleWishlist = () => {
-    if (!userId) {
-      alert("Please log in to manage your wishlist.");
-      return;
-    }
-    if (wishlist.includes(product._id)) removeItem(product._id);
+    if (!userId) return redirectToLogin();
+    if (isInWishlist) removeItem(product._id);
     else addItem(product._id);
   };
 
   const handleAddToCart = async () => {
-    if (!userId) {
-      alert("Please log in to add products to your cart.");
-      return;
-    }
-
+    if (!userId) return redirectToLogin();
     try {
       setAddingToCart(true);
-      await addToCart(product._id, 1); // default quantity 1
-      alert(`${product.name} added to cart!`);
+      await addCartItem(product._id, quantity);
+      alert(`${product.name} (x${quantity}) added to cart!`);
     } catch (err) {
       console.error("Failed to add to cart:", err);
-      alert("Failed to add to cart. Try again.");
+      alert("Failed to add to cart.");
     } finally {
       setAddingToCart(false);
     }
   };
 
   const handleBuyNow = async () => {
-    if (!userId) {
-      alert("Please log in to buy products.");
-      return;
-    }
-
+    if (!userId) return redirectToLogin();
     try {
       setAddingToCart(true);
-      await addToCart(product._id, 1); // add to cart before buying
-      navigate("/cart"); // redirect to cart for checkout
+      await addCartItem(product._id, quantity);
+      navigate("/checkout", {
+        state: {
+          items: [{ product, quantity }],
+          total: product.price * quantity,
+        },
+      });
     } catch (err) {
-      console.error("Failed to buy product:", err);
-      alert("Failed to proceed. Try again.");
+      console.error("Failed to proceed to checkout:", err);
+      alert("Failed to proceed to checkout.");
     } finally {
       setAddingToCart(false);
     }
   };
 
-  if (loading || wishlistLoading) return <p style={{ textAlign: 'center' }}>Loading product...</p>;
-  if (error) return <p style={{ textAlign: 'center', color: 'red' }}>{error}</p>;
-  if (!product) return <p style={{ textAlign: 'center' }}>Product not found.</p>;
+  const handleQuantityChange = (delta) => {
+    setQuantity(prev => {
+      const next = prev + delta;
+      if (next < 1) return 1;
+      if (product && next > product.stock) return product.stock;
+      return next;
+    });
+  };
+
+  if (loading || wishlistLoading)
+    return <p style={{ textAlign: "center" }}>Loading product...</p>;
+  if (error) return <p style={{ textAlign: "center", color: "red" }}>{error}</p>;
+  if (!product) return <p style={{ textAlign: "center" }}>Product not found.</p>;
 
   return (
     <div
       style={{
-        display: 'flex',
-        gap: '2rem',
-        padding: '2rem',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        position: 'relative',
+        display: "flex",
+        gap: "2rem",
+        padding: "2rem",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        position: "relative",
       }}
     >
-      {/* Wishlist Heart Icon */}
+      {/* Wishlist Icon */}
       <div
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          zIndex: 10,
-          fontSize: '1.8rem',
-          color: wishlist.includes(product._id) ? '#dc2626' : '#ccc',
-          cursor: 'pointer',
-        }}
         onClick={handleWishlist}
+        style={{
+          position: "absolute",
+          top: "20px",
+          right: "20px",
+          fontSize: "1.8rem",
+          color: isInWishlist ? "#dc2626" : "#ccc",
+          cursor: "pointer",
+        }}
       >
         ❤️
       </div>
 
-      {/* Images Section */}
-      <div style={{ flex: '1 1 300px' }}>
+      {/* Product Images */}
+      <div style={{ flex: "1 1 300px" }}>
         <img
           src={getImageUrl(product.images[mainImageIndex])}
           alt={product.name}
           onMouseEnter={() => setHoveredIndex(mainImageIndex)}
           onMouseLeave={() => setHoveredIndex(null)}
           style={{
-            width: '100%',
-            maxWidth: '400px',
-            marginBottom: '1rem',
-            objectFit: 'cover',
-            borderRadius: '8px',
-            transition: 'transform 0.3s ease',
-            transform: hoveredIndex === mainImageIndex ? 'scale(1.1)' : 'scale(1)',
-            cursor: 'pointer',
+            width: "100%",
+            maxWidth: "400px",
+            borderRadius: "8px",
+            transition: "transform 0.3s ease",
+            transform: hoveredIndex === mainImageIndex ? "scale(1.1)" : "scale(1)",
           }}
         />
-
-        {/* Thumbnail Strip */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {product.images && product.images.length > 0 ? (
-            product.images.map((img, index) => (
-              <img
-                key={index}
-                src={getImageUrl(img)}
-                alt={`Thumbnail ${index + 1}`}
-                onClick={() => setMainImageIndex(index)}
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  objectFit: 'cover',
-                  borderRadius: '5px',
-                  border: mainImageIndex === index ? '2px solid #1d3557' : '1px solid #ccc',
-                  cursor: 'pointer',
-                }}
-              />
-            ))
-          ) : (
-            <p>No images available</p>
-          )}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "10px" }}>
+          {product.images?.map((img, index) => (
+            <img
+              key={index}
+              src={getImageUrl(img)}
+              alt={`Thumbnail ${index + 1}`}
+              onClick={() => setMainImageIndex(index)}
+              style={{
+                width: "60px",
+                height: "60px",
+                objectFit: "cover",
+                borderRadius: "5px",
+                border: mainImageIndex === index ? "2px solid #1d3557" : "1px solid #ccc",
+                cursor: "pointer",
+              }}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Product Info Section */}
-      <div style={{ flex: '1 1 300px', maxWidth: '500px' }}>
-        <h2 style={{ marginBottom: '1rem' }}>{product.name}</h2>
-        <p style={{ fontWeight: 'bold', color: '#e63946', marginBottom: '1rem' }}>
-          Price: ${product.price}
-        </p>
-        <p style={{ marginBottom: '1rem' }}>{product.description}</p>
-        <p style={{ marginBottom: '0.5rem' }}>
-          Category: {product.category?.name || 'N/A'}
-        </p>
-        <p style={{ marginBottom: '1rem', fontWeight: 'bold' }}>
-          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-        </p>
+      {/* Product Info */}
+      <div style={{ flex: "1 1 300px", maxWidth: "500px" }}>
+        <h2>{product.name}</h2>
+        <p style={{ color: "#e63946", fontWeight: "bold" }}>Price: ${product.price}</p>
+        <p>{product.description}</p>
+        <p style={{ fontWeight: "bold" }}>{product.stock > 0 ? "In Stock" : "Out of Stock"}</p>
 
-        {/* Buttons */}
-        <div style={{ marginTop: '15px' }}>
-          {product.stock > 0 ? (
-            <>
+        {product.stock > 0 && (
+          <div style={{ marginTop: "15px" }}>
+            {/* Quantity Selector */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", gap: "10px" }}>
               <button
-                onClick={handleAddToCart}
-                disabled={addingToCart}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#1d3557',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  borderRadius: '5px',
-                  marginRight: '10px',
-                }}
-              >
-                🛒 Add to Cart
-              </button>
+                onClick={() => handleQuantityChange(-1)}
+                style={{ padding: "5px 10px" }}
+              >-</button>
+              <span>{quantity}</span>
+              <button
+                onClick={() => handleQuantityChange(1)}
+                style={{ padding: "5px 10px" }}
+              >+</button>
+              <span style={{ marginLeft: 10, fontSize: "0.9rem", color: "#555" }}>Stock: {product.stock}</span>
+            </div>
 
-              <button
-                onClick={handleBuyNow}
-                disabled={addingToCart}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#ff9900',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  borderRadius: '5px',
-                }}
-              >
-                💳 Buy Now
-              </button>
-            </>
-          ) : (
             <button
-              onClick={handleWishlist}
+              onClick={handleAddToCart}
+              disabled={addingToCart}
               style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: wishlist.includes(product._id) ? '#dc2626' : '#ccc',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "#1d3557",
+                color: "#fff",
+                border: "none",
+                marginRight: "10px",
+                cursor: "pointer",
               }}
             >
-              ❤️ {wishlist.includes(product._id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+              🛒 Add to Cart
             </button>
-          )}
-        </div>
+
+            <button
+              onClick={handleBuyNow}
+              disabled={addingToCart}
+              style={{
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "#ff9900",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              💳 Buy Now
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

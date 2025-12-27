@@ -12,6 +12,12 @@ export const verifyOtp = async (orderId, otp) => {
   return data;
 };
 
+// ---------------- Resend OTP ----------------
+export const resendOtp = async (orderId) => {
+  const { data } = await api.post(`/orders/resend-otp/${orderId}`);
+  return data;
+};
+
 // ---------------- Get orders by user ----------------
 export const getOrdersByUser = async (userId) => {
   const { data } = await api.get(`/orders/user/${userId}`);

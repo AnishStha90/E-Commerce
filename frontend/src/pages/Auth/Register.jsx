@@ -63,7 +63,8 @@ const RegisterPage = () => {
           description: formData.description,
           email: formData.email,
           phone: formData.phone,
-          password: formData.password
+          password: formData.password,
+          role: 'vendor'
         };
         await registerVendor(payload);
       }

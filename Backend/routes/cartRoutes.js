@@ -1,20 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const { protect, allowRoles } = require('../middleware/authMiddleware');
 const {
-    getCart,
-    addToCart,
-    updateCart,
-    removeFromCart,
-    clearCart
+  getCart,
+  addToCart,
+  removeFromCart,
+  clearCart
 } = require('../controllers/cartController');
 
-const { protect, isUser } = require('../middleware/authMiddleware');
-
-// All cart routes are for logged-in users only
-router.get('/', protect, isUser, getCart);
-router.post('/', protect, isUser, addToCart);
-router.put('/', protect, isUser, updateCart);
-router.delete('/:productId', protect, isUser, removeFromCart);
-router.delete('/', protect, isUser, clearCart);
+// All routes are protected and allowed for 'user' & 'vendor'
+router.get('/', protect, allowRoles('user', 'vendor'), getCart);
+router.post('/add', protect, allowRoles('user', 'vendor'), addToCart);
+router.delete('/remove/:productId', protect, allowRoles('user', 'vendor'), removeFromCart);
+router.delete('/clear', protect, allowRoles('user', 'vendor'), clearCart);
 
 module.exports = router;

@@ -1,96 +1,59 @@
 const asyncHandler = require('express-async-handler');
 const Wishlist = require('../models/Wishlist');
 
-// Middleware to ensure the logged-in user matches the userId param
-const checkOwnership = (req, res, next) => {
-    if (req.user._id.toString() !== req.params.userId) {
-        return res.status(403).json({ message: 'Access denied: Not your wishlist' });
-    }
-    next();
-};
-
-// Get wishlist of a user
+// GET wishlist for logged-in user
 exports.getWishlist = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
+  const userId = req.user._id;
 
-    const wishlist = await Wishlist.findOne({ user: userId }).populate('products');
-    if (!wishlist) {
-        return res.status(404).json({ message: 'Wishlist not found' });
-    }
+  const wishlist = await Wishlist.findOne({ user: userId }).populate('products');
+  if (!wishlist) return res.status(200).json({ products: [] }); // return empty if none
 
-    res.json(wishlist);
+  res.json(wishlist);
 });
 
-// Update (or create) wishlist
-exports.updateWishlist = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-    const { products } = req.body;
-
-    if (!Array.isArray(products)) {
-        return res.status(400).json({ message: 'Products should be an array of product IDs' });
-    }
-
-    const wishlist = await Wishlist.findOneAndUpdate(
-        { user: userId },
-        { products },
-        { upsert: true, new: true }
-    ).populate('products');
-
-    res.json(wishlist);
-});
-
-// Clear wishlist
-exports.clearWishlist = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-
-    const wishlist = await Wishlist.findOneAndUpdate(
-        { user: userId },
-        { products: [] },
-        { new: true }
-    ).populate('products');
-
-    res.json(wishlist);
-});
-
-// Add a product to wishlist
+// ADD product to wishlist
 exports.addToWishlist = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-    const { productId } = req.body;
+  const userId = req.user._id;
+  const { productId } = req.body;
 
-    if (!productId) {
-        return res.status(400).json({ message: 'Product ID is required' });
+  if (!productId) return res.status(400).json({ message: 'Product ID is required' });
+
+  let wishlist = await Wishlist.findOne({ user: userId });
+
+  if (!wishlist) {
+    wishlist = new Wishlist({ user: userId, products: [productId] });
+  } else {
+    if (!wishlist.products.includes(productId)) {
+      wishlist.products.push(productId);
     }
+    // If product already exists, don't return error; just send current wishlist
+  }
 
-    let wishlist = await Wishlist.findOne({ user: userId });
+  await wishlist.save();
+  await wishlist.populate('products');
 
-    if (!wishlist) {
-        wishlist = new Wishlist({ user: userId, products: [productId] });
-    } else {
-        if (wishlist.products.includes(productId)) {
-            return res.status(400).json({ message: 'Product already in wishlist' });
-        }
-        wishlist.products.push(productId);
-    }
-
-    await wishlist.save();
-    await wishlist.populate('products');
-    res.json(wishlist);
+  res.json({
+    message: wishlist.products.includes(productId) 
+        ? 'Product added to wishlist' 
+        : 'Product already in wishlist',
+    wishlist
+  });
 });
 
-// Remove a product from wishlist
+
+
+// REMOVE product from wishlist
 exports.removeFromWishlist = asyncHandler(async (req, res) => {
-    const { userId, productId } = req.params;
+  const userId = req.user._id;
+  const { productId } = req.params;
 
-    let wishlist = await Wishlist.findOne({ user: userId });
+  const wishlist = await Wishlist.findOne({ user: userId });
+  if (!wishlist || !wishlist.products.includes(productId))
+    return res.status(404).json({ message: 'Product not found in wishlist' });
 
-    if (!wishlist || !wishlist.products.includes(productId)) {
-        return res.status(404).json({ message: 'Product not found in wishlist' });
-    }
+  wishlist.products = wishlist.products.filter(p => p.toString() !== productId);
+  await wishlist.save();
+  await wishlist.populate('products');
 
-    wishlist.products = wishlist.products.filter(p => p.toString() !== productId);
-    await wishlist.save();
-    await wishlist.populate('products');
-    res.json(wishlist);
+  res.json(wishlist);
 });
-
-module.exports.checkOwnership = checkOwnership;

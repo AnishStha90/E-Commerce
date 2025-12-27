@@ -1,197 +1,247 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getCart,
   addToCart,
   removeFromCart,
   clearCart,
 } from "../../api/cartApi";
-import { useNavigate } from "react-router-dom";
+import noImage from "../../assets/images/no-image.png";
 
 const BASE_URL = "http://localhost:5000";
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState({});
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch cart
+  /* ================= IMAGE HANDLER ================= */
+  const getImageUrl = (product) => {
+    if (!product) return noImage;
+
+    if (product.image) {
+      return `${BASE_URL}/${product.image.replace(/^\/+/, "")}`;
+    }
+
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      return `${BASE_URL}/${product.images[0].replace(/^\/+/, "")}`;
+    }
+
+    return noImage;
+  };
+
+  /* ================= FETCH CART ================= */
   const fetchCart = async () => {
-    const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
-    if (!token || !user) {
-      console.log("User is NOT logged in");
-      alert("You must be logged in to view the cart.");
+    if (!user?.token) {
       navigate("/login");
       return;
     }
 
-    console.log("User is logged in, fetching cart...");
-
     try {
       setLoading(true);
-      const data = await getCart(user.id); // Pass userId here
-      setCartItems(data.products || []);
-      console.log("Cart fetched:", data);
+      const data = await getCart();
+      const products = data.products || [];
+
+      setCartItems(products);
+
+      // select all by default
+      const selected = {};
+      products.forEach((item) => {
+        if (item.product?._id) {
+          selected[item.product._id] = true;
+        }
+      });
+      setSelectedItems(selected);
     } catch (err) {
-      console.error("Error fetching cart:", err);
-      alert("Failed to fetch cart. Make sure you are logged in as a user.");
+      alert("Failed to load cart");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    console.log("Checking login status...");
-    if (token) {
-      console.log("User is logged in");
-      console.log("User info:", user);
-    } else {
-      console.log("User is NOT logged in");
-    }
-
     fetchCart();
   }, []);
 
-  // Remove item
+  /* ================= REMOVE ITEM ================= */
   const handleRemove = async (productId) => {
-    const user = JSON.parse(localStorage.getItem("user"));
     try {
-      await removeFromCart(user.id, productId);
-      setCartItems(cartItems.filter((item) => item.product._id !== productId));
-      console.log(`Removed product ${productId} from cart`);
-    } catch (err) {
-      console.error("Failed to remove product:", err);
-    }
-  };
+      setUpdating(true);
+      const data = await removeFromCart(productId);
+      const products = data.products || [];
 
-  // Update quantity
-  const handleQuantityChange = async (productId, quantity) => {
-    if (quantity < 1) return;
-    setUpdating(true);
-    const user = JSON.parse(localStorage.getItem("user"));
-    try {
-      await addToCart(user.id, productId, quantity);
-      console.log(`Updated quantity of product ${productId} to ${quantity}`);
-      fetchCart();
+      setCartItems(products);
+
+      // resync selection
+      const selected = {};
+      products.forEach((item) => {
+        selected[item.product._id] = true;
+      });
+      setSelectedItems(selected);
     } catch (err) {
-      console.error("Failed to update quantity:", err);
+      alert("Failed to remove item");
     } finally {
       setUpdating(false);
     }
   };
 
-  // Clear cart
-  const handleClearCart = async () => {
-    if (!window.confirm("Are you sure you want to clear the cart?")) return;
-    const user = JSON.parse(localStorage.getItem("user"));
+  /* ================= UPDATE QUANTITY ================= */
+  const handleQuantityChange = async (productId, newQty) => {
+    if (newQty < 1) return;
+
+    const item = cartItems.find((i) => i.product?._id === productId);
+    if (!item) return;
+
+    const diff = newQty - item.quantity;
+    if (diff === 0) return;
+
     try {
-      await clearCart(user.id);
-      setCartItems([]);
-      console.log("Cart cleared");
+      setUpdating(true);
+      const data = await addToCart(productId, diff);
+      const products = data.products || [];
+
+      setCartItems(products);
+
+      // keep selection
+      setSelectedItems((prev) => {
+        const updated = {};
+        products.forEach((p) => {
+          updated[p.product._id] = prev[p.product._id] ?? true;
+        });
+        return updated;
+      });
     } catch (err) {
-      console.error("Failed to clear cart:", err);
+      alert("Failed to update quantity");
+    } finally {
+      setUpdating(false);
     }
   };
 
-  const totalAmount = cartItems.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
-    0
-  );
+  /* ================= CLEAR CART ================= */
+  const handleClearCart = async () => {
+    if (!window.confirm("Clear cart?")) return;
 
+    try {
+      setUpdating(true);
+      const data = await clearCart();
+      setCartItems(data.products || []);
+      setSelectedItems({});
+    } catch (err) {
+      alert("Failed to clear cart");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  /* ================= BUY NOW ================= */
+  const handleBuyNow = () => {
+    const selectedProducts = cartItems.filter(
+      (item) => selectedItems[item.product?._id]
+    );
+
+    if (!selectedProducts.length) {
+      alert("Please select at least one item to buy.");
+      return;
+    }
+
+    navigate("/checkout", {
+      state: {
+        items: selectedProducts,
+        total: totalAmount,
+      },
+    });
+  };
+
+  /* ================= TOTAL ================= */
+  const totalAmount = cartItems.reduce((sum, item) => {
+    if (selectedItems[item.product?._id]) {
+      return sum + (item.product?.price || 0) * item.quantity;
+    }
+    return sum;
+  }, 0);
+
+  /* ================= UI ================= */
   if (loading) return <p style={{ textAlign: "center" }}>Loading cart...</p>;
 
-  if (cartItems.length === 0)
+  if (!cartItems.length)
     return (
-      <div style={{ textAlign: "center", marginTop: "50px" }}>
-        <h2>Your cart is empty.</h2>
-        <button
-          onClick={() => navigate("/products")}
-          style={{
-            marginTop: "20px",
-            padding: "10px 20px",
-            backgroundColor: "#1d3557",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          Browse Products
-        </button>
+      <div style={{ textAlign: "center", marginTop: 50 }}>
+        <h2>Your cart is empty</h2>
+        <button onClick={() => navigate("/products")}>Shop Now</button>
       </div>
     );
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>Your Cart</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <div style={{ padding: 20 }}>
+      <h2 style={{ textAlign: "center", marginBottom: 20 }}>Your Cart</h2>
+
+      <table width="100%" cellPadding={10}>
         <thead>
-          <tr style={{ borderBottom: "2px solid #ccc" }}>
-            <th style={{ textAlign: "left", padding: "10px" }}>Product</th>
+          <tr>
+            <th>Select</th>
+            <th align="left">Product</th>
             <th>Price</th>
-            <th>Quantity</th>
+            <th>Qty</th>
             <th>Total</th>
-            <th>Actions</th>
+            <th />
           </tr>
         </thead>
+
         <tbody>
-          {cartItems.map((item) => (
-            <tr key={item.product._id} style={{ borderBottom: "1px solid #eee" }}>
-              <td
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px",
-                }}
-              >
-                <img
-                  src={
-                    item.product.images && item.product.images.length > 0
-                      ? `${BASE_URL}${item.product.images[0].url}`
-                      : "https://via.placeholder.com/50x50?text=No+Image"
+          {cartItems.map((item, index) => (
+            <tr key={`${item.product?._id}-${index}`}>
+              <td align="center">
+                <input
+                  type="checkbox"
+                  checked={selectedItems[item.product?._id] || false}
+                  onChange={() =>
+                    setSelectedItems((p) => ({
+                      ...p,
+                      [item.product._id]: !p[item.product._id],
+                    }))
                   }
-                  alt={item.product.name}
-                  style={{
-                    width: "50px",
-                    height: "50px",
-                    objectFit: "cover",
-                    borderRadius: "5px",
-                  }}
                 />
-                <span>{item.product.name}</span>
               </td>
-              <td style={{ textAlign: "center" }}>${item.product.price}</td>
-              <td style={{ textAlign: "center" }}>
+
+              <td style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <img
+                  src={getImageUrl(item.product)}
+                  alt={item.product?.name}
+                  width={50}
+                  height={50}
+                  style={{ objectFit: "cover", borderRadius: 5 }}
+                />
+                {item.product?.name}
+              </td>
+
+              <td align="center">${item.product?.price || 0}</td>
+
+              <td align="center">
                 <input
                   type="number"
-                  value={item.quantity}
                   min={1}
-                  onChange={(e) =>
-                    handleQuantityChange(item.product._id, parseInt(e.target.value))
-                  }
-                  style={{ width: "60px", textAlign: "center" }}
+                  value={item.quantity}
                   disabled={updating}
+                  onChange={(e) =>
+                    handleQuantityChange(
+                      item.product._id,
+                      Number(e.target.value)
+                    )
+                  }
+                  style={{ width: 60 }}
                 />
               </td>
-              <td style={{ textAlign: "center" }}>
-                ${item.product.price * item.quantity}
+
+              <td align="center">
+                ${(item.product?.price || 0) * item.quantity}
               </td>
-              <td style={{ textAlign: "center" }}>
+
+              <td align="center">
                 <button
                   onClick={() => handleRemove(item.product._id)}
-                  style={{
-                    backgroundColor: "#dc2626",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "5px",
-                    padding: "5px 10px",
-                    cursor: "pointer",
-                  }}
                   disabled={updating}
                 >
                   Remove
@@ -202,22 +252,38 @@ export default function CartPage() {
         </tbody>
       </table>
 
-      <div style={{ textAlign: "right", marginTop: "20px" }}>
-        <h3>Total Amount: ${totalAmount}</h3>
-        <button
-          onClick={handleClearCart}
-          style={{
-            marginTop: "10px",
-            padding: "10px 20px",
-            backgroundColor: "#555",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          Clear Cart
-        </button>
+      <div style={{ textAlign: "right", marginTop: 20 }}>
+        <h3>Total (Selected): ${totalAmount}</h3>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={handleClearCart}
+            disabled={updating}
+            style={{
+              padding: "10px 16px",
+              background: "#555",
+              color: "#fff",
+              border: "none",
+              borderRadius: 5,
+            }}
+          >
+            Clear Cart
+          </button>
+
+          <button
+            onClick={handleBuyNow}
+            disabled={updating || totalAmount === 0}
+            style={{
+              padding: "10px 20px",
+              background: "#16a34a",
+              color: "#fff",
+              border: "none",
+              borderRadius: 5,
+            }}
+          >
+            Buy Now
+          </button>
+        </div>
       </div>
     </div>
   );

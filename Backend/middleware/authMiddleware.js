@@ -17,6 +17,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
       if (user) {
         // Use role stored in DB ('user' or 'admin')
         req.user = user;
+         req.user.role = user.role || 'user'; // fallback if role missing
       } else {
         // If not found, try Vendor collection
         user = await Vendor.findById(decoded.id).select('-password');
@@ -37,9 +38,18 @@ exports.protect = asyncHandler(async (req, res, next) => {
   }
 });
 
+exports.isVendor = (req, res, next) => {
+  console.log('isVendor check, req.user:', req.user);
+  if (req.user?.role === 'vendor') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Vendors only' });
+};
+
+
 // Role check middlewares
 exports.isAdmin = (req, res, next) => req.user?.role === 'admin' ? next() : res.status(403).json({ message: 'Admins only' });
-exports.isVendor = (req, res, next) => req.user?.role === 'vendor' ? next() : res.status(403).json({ message: 'Vendors only' });
+//exports.isVendor = (req, res, next) => req.user?.role === 'vendor' ? next() : res.status(403).json({ message: 'Vendors only' });
 exports.isUser = (req, res, next) => req.user?.role === 'user' ? next() : res.status(403).json({ message: 'Users only' });
 
 

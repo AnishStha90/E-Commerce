@@ -6,6 +6,7 @@ const OrderSchema = new mongoose.Schema({
     products: [
         { 
             product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true }, 
+            vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             quantity: { type: Number, default: 1, min: 1 } 
         }
     ],
@@ -17,11 +18,16 @@ const OrderSchema = new mongoose.Schema({
     },
     address: { type: addressSchema, required: true },
 
+    // Payment method
+    paymentMethod: { type: String, enum: ['cod', 'card', 'online'], default: 'cod' },
+
     // OTP for payment confirmation
     otp: {
-        code: { type: String },      // Store the OTP code itself
-        expiresAt: { type: Date },   // Optional: expiration time for OTP
-        verified: { type: Boolean, default: false } // Has the user confirmed the OTP?
+        code: { type: String },
+        expiresAt: { type: Date },
+        verified: { type: Boolean, default: false },
+        attempts: { type: Number, default: 0 },      // track OTP send attempts
+        lastSentAt: { type: Date }                  // last time OTP was sent
     }
 
 }, { timestamps: true });

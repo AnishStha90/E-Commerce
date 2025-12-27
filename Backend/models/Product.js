@@ -6,8 +6,9 @@ const ProductSchema = new mongoose.Schema({
     price: { type: Number, required: true, min: 0 },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     images: [{ type: String }],
-    stock: { type: Number, required: true, default: 0, min: 0 }, 
-    isActive: { type: Boolean, default: true }
+    stock: { type: Number, required: true, default: 0, min: 0 },
+    isActive: { type: Boolean, default: true },
+    vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true } // Added vendor
 }, { timestamps: true });
 
 // Optional index for faster category and price filtering

@@ -5,7 +5,8 @@ const VendorSchema = new mongoose.Schema({
     description: { type: String },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true },
-    password: { type: String, required: true }  // Add password field
+    password: { type: String, required: true },
+    role: { type: String, enum: ['admin', 'vendor', 'user'], default: 'vendor' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Vendor', VendorSchema);

@@ -5,7 +5,6 @@ import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import AppRoutes from "./routes/AppRoutes";
-
 function App() {
   return (
     <AuthProvider>

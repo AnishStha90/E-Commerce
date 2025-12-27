@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import '../../assets/styles/home.css';
 import { getProducts } from "../../api/productApi";
 import noImage from '../../assets/images/no-image.png';
 import { FaHeart } from 'react-icons/fa';
-import { WishlistContext } from "../../context/WishlistContext";
+import { useWishlist } from "../../context/WishlistContext";
+import { toast } from "react-toastify";
 
 function HomePage() {
   const navigate = useNavigate();
@@ -14,8 +15,7 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const { wishlist, addItem, removeItem } = useContext(WishlistContext);
-
+  const { wishlist, loading: wishlistLoading, addItem, removeItem } = useWishlist();
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = user?.id;
 
@@ -33,48 +33,55 @@ function HomePage() {
     return arr;
   };
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const products = await getProducts();
-        const productsArray = Array.isArray(products) ? products : products.products || [];
+  // Fetch products
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const products = await getProducts();
+      const productsArray = Array.isArray(products) ? products : products.products || [];
+      setAllProducts(productsArray);
 
-        setAllProducts(productsArray);
+      // Flash Sale Products
+      const flashSaleAll = productsArray.filter(p => p.discount && p.discount > 0);
+      setFlashSaleProducts(shuffleArray(flashSaleAll).slice(0, 4));
 
-        const flashSaleAll = productsArray.filter(p => p.discount && p.discount > 0);
-        setFlashSaleProducts(shuffleArray(flashSaleAll).slice(0, 4));
-        setDisplayedProducts(shuffleArray(productsArray).slice(0, 8));
-      } catch (err) {
-        setError("Failed to load products.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, []);
+      // Featured Products -> Top 8 best selling
+      const topSelling = [...productsArray]
+        .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
+        .slice(0, 8);
+      setDisplayedProducts(topSelling);
 
-  const handleWishlist = (productId, e) => {
-    e.stopPropagation();
-    if (!userId) return alert("Please login to manage your wishlist.");
-    if (wishlist.includes(productId)) {
-      removeItem(productId);
-    } else {
-      addItem(productId);
+    } catch (err) {
+      setError("Failed to load products.");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleBuyNow = (productId) => {
-    navigate(`/product/${productId}`);
-  };
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-  const handleProductClick = (productId) => {
-    navigate(`/productDetail/${productId}`);
+  const handleWishlist = async (productId, e) => {
+    e.stopPropagation();
+    if (!userId) return toast.info("Please login to manage your wishlist.");
+
+    try {
+      if (wishlist.includes(productId)) await removeItem(productId);
+      else await addItem(productId);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update wishlist.");
+    }
   };
+  
+  const handleBuyNow = (productId) => navigate(`/product/${productId}`);
+  const handleProductClick = (productId) => navigate(`/product/${productId}`);
 
   const renderProductCard = (product) => {
     const isInWishlist = wishlist.includes(product._id);
+
     return (
       <div
         key={product._id}
@@ -99,7 +106,8 @@ function HomePage() {
             right: '10px',
             color: isInWishlist ? '#dc2626' : '#ccc',
             cursor: 'pointer',
-            transition: 'color 0.2s'
+            transition: 'all 0.3s',
+            transform: isInWishlist ? 'scale(1.2)' : 'scale(1)'
           }}
         />
 
@@ -119,37 +127,36 @@ function HomePage() {
           )}
         </p>
 
-        {/* Stock Messages */}
         {product.stock === 0 ? (
           <p style={{ color: "#dc2626", fontWeight: "bold" }}>❌ Out of Stock</p>
         ) : product.stock <= 10 ? (
           <p style={{ color: "#dc2626", fontWeight: "bold" }}>⚠️ Low Stock: {product.stock} left</p>
         ) : null}
 
-        <div style={{ marginTop: "10px" }}>
-          {/* Buy Now */}
-          <button
-            onClick={(e) => { e.stopPropagation(); handleBuyNow(product._id); }}
-            style={{
-              width: '100%',
-              backgroundColor: "#ff9900",
-              border: "none",
-              borderRadius: "5px",
-              color: "#fff",
-              padding: "8px 12px",
-              cursor: product.stock === 0 ? "not-allowed" : "pointer",
-              opacity: product.stock === 0 ? 0.6 : 1,
-            }}
-            disabled={product.stock === 0}
-          >
-            💳 Buy Now
-          </button>
-        </div>
+        {/* Show Buy Now button only if stock > 0 */}
+        {product.stock > 0 && (
+          <div style={{ marginTop: "10px" }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleBuyNow(product._id); }}
+              style={{
+                width: '100%',
+                backgroundColor: "#ff9900",
+                border: "none",
+                borderRadius: "5px",
+                color: "#fff",
+                padding: "8px 12px",
+                cursor: "pointer",
+              }}
+            >
+              💳 Buy Now
+            </button>
+          </div>
+        )}
       </div>
     );
   };
 
-  if (loading) return <p>Loading products...</p>;
+  if (loading || wishlistLoading) return <p>Loading products...</p>;
   if (error) return <p>{error}</p>;
 
   return (

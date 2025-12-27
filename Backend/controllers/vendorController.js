@@ -3,8 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Vendor = require('../models/Vendor');
 
-// Generate JWT
-const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+// Generate JWT with role
+const generateToken = (id, role) => jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 // Validators
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -13,7 +13,7 @@ const validatePassword = (password) => password.length >= 6;
 
 /* -------------------- Register Vendor -------------------- */
 exports.registerVendor = asyncHandler(async (req, res) => {
-  const { storeName, description, password, email, phone } = req.body;
+  const { storeName, description, password, email, phone, role } = req.body;
 
   if (!storeName || !password || !email || !phone) {
     return res.status(400).json({ message: 'All fields are required' });
@@ -36,7 +36,8 @@ exports.registerVendor = asyncHandler(async (req, res) => {
     description,
     email,
     phone,
-    password: hashedPassword
+    password: hashedPassword,
+    role: role || 'vendor' // default role
   });
 
   if (!vendor) return res.status(400).json({ message: 'Invalid vendor data' });
@@ -47,7 +48,8 @@ exports.registerVendor = asyncHandler(async (req, res) => {
     description: vendor.description,
     email: vendor.email,
     phone: vendor.phone,
-    token: generateToken(vendor._id)
+    role: vendor.role,
+    token: generateToken(vendor._id, vendor.role)
   });
 });
 
@@ -68,7 +70,8 @@ exports.loginVendor = asyncHandler(async (req, res) => {
     description: vendor.description,
     email: vendor.email,
     phone: vendor.phone,
-    token: generateToken(vendor._id)
+    role: vendor.role,
+    token: generateToken(vendor._id, vendor.role)
   });
 });
 
@@ -82,7 +85,8 @@ exports.getVendorProfile = asyncHandler(async (req, res) => {
     storeName: vendor.storeName,
     description: vendor.description,
     email: vendor.email,
-    phone: vendor.phone
+    phone: vendor.phone,
+    role: vendor.role
   });
 });
 
@@ -95,6 +99,7 @@ exports.updateVendorProfile = asyncHandler(async (req, res) => {
   vendor.description = req.body.description || vendor.description;
   vendor.email = req.body.email || vendor.email;
   vendor.phone = req.body.phone || vendor.phone;
+  vendor.role = req.body.role || vendor.role; // allow role update if needed
 
   if (req.body.password) {
     if (!validatePassword(req.body.password)) return res.status(400).json({ message: 'Password too short' });
@@ -108,7 +113,8 @@ exports.updateVendorProfile = asyncHandler(async (req, res) => {
     storeName: updatedVendor.storeName,
     description: updatedVendor.description,
     email: updatedVendor.email,
-    phone: updatedVendor.phone
+    phone: updatedVendor.phone,
+    role: updatedVendor.role
   });
 });
 
@@ -123,6 +129,9 @@ exports.deleteVendorProfile = asyncHandler(async (req, res) => {
 
 /* -------------------- Get All Vendors (Admin) -------------------- */
 exports.getAllVendors = asyncHandler(async (req, res) => {
+  // Only admin can access
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+
   const vendors = await Vendor.find();
   res.json(vendors);
 });

@@ -1,31 +1,69 @@
-import api from "./axiosConfig"; // your configured axios instance
+import axios from "axios";
 
-// Get Cart
+const API_URL = "http://localhost:5000/api/carts";
+
+// Helper to get auth token
+const getAuthToken = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
+  if (!token) throw new Error("User not authenticated");
+  return token;
+};
+
+// Get cart for logged-in user
 export const getCart = async () => {
-  const response = await api.get("/carts");
-  return response.data;
+  const token = getAuthToken();
+  try {
+    const res = await axios.get(API_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data; // return cart object
+  } catch (err) {
+    console.error("Failed to fetch cart:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
-// Add or Update Product in Cart
-export const addToCart = async (productId, quantity) => {
-  const response = await api.post("/carts", { product: productId, quantity });
-  return response.data;
+// Add or update product in cart
+export const addToCart = async (productId, quantity = 1) => {
+  const token = getAuthToken();
+  try {
+    const res = await axios.post(
+      `${API_URL}/add`,
+      { product: productId, quantity },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data; // return updated cart
+  } catch (err) {
+    console.error("Failed to add product to cart:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
-// Update Entire Cart
-export const updateCart = async (products) => {
-  const response = await api.put("/carts", { products });
-  return response.data;
-};
-
-// Remove Product from Cart
+// Remove product from cart
 export const removeFromCart = async (productId) => {
-  const response = await api.delete(`/carts/${productId}`);
-  return response.data;
+  const token = getAuthToken();
+  try {
+    const res = await axios.delete(`${API_URL}/remove/${productId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data; // return updated cart
+  } catch (err) {
+    console.error("Failed to remove product from cart:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
-// Clear Cart
+// Clear cart
 export const clearCart = async () => {
-  const response = await api.delete("/carts/clear");
-  return response.data;
+  const token = getAuthToken();
+  try {
+    const res = await axios.delete(`${API_URL}/clear`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data; // return cleared cart message
+  } catch (err) {
+    console.error("Failed to clear cart:", err.response?.data || err.message);
+    throw err;
+  }
 };

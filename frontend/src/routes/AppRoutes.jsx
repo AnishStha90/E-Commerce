@@ -13,6 +13,7 @@ import VendorDashboard from "../pages/Vendor/VendorDashboard";
 import NotFound from "../pages/Error/NotFound";
 import PrivateRoutes from "./PrivateRoutes";
 
+
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import NotificationList from "../pages/Home/NotificationList";
@@ -29,11 +30,23 @@ import AdminLayout from "../pages/Admin/AdminLayout";
 import AddCategory from "../pages/Admin/AddCategory";
 import ManageCategories from "../pages/Admin/ManageCategory";
 import AdminProfile from "../pages/Admin/AdminProfile";
+import Checkout from "../pages/Order/Checkout";
+import InvoicePage from "../pages/Order/InvoicePage";
+import PaymentPage from "../pages/Order/PaymentPage";
+import UserProfile from "../pages/User/Profile";
+import OtpInput from "../pages/Order/OtpInput";
+import OrderSuccess from "../pages/Order/OderSucess";
 export default function AppRoutes() {
   const location = useLocation();
 
   // Show header/footer only on user routes
-  const showHeaderFooter = !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/vendors") && !location.pathname.startsWith("/login") && !location.pathname.startsWith("/register");
+  const showHeaderFooter =
+  !location.pathname.startsWith("/admin") &&
+  !location.pathname.startsWith("/vendors") &&
+  !location.pathname.startsWith("/login") &&
+  !location.pathname.startsWith("/register") &&
+  !location.pathname.startsWith("/verify-otp");
+
 
   return (
     <>
@@ -42,7 +55,8 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
+        <Route path="/verify-otp/:orderId" element={<OtpInput />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/product" element={<ProductList />} />
@@ -50,8 +64,11 @@ export default function AppRoutes() {
         <Route path="/notifications" element={<NotificationList />} />
         <Route path="/messages" element={<MessageCenter />} />
         <Route path="/products" element={<ProductList />} />
-        <Route path="/products/:id" element={<ProductDetail />} />
-
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/invoice" element={<InvoicePage />} />
+        <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/profile" element={<UserProfile/>} />
         <Route element={<PrivateRoutes role="user" />}>
           <Route path="/carts" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />

@@ -1,32 +1,59 @@
-// wishlistapi.js
-import api from './axiosConfig';
+import axios from "axios";
 
-/* -------------------- Get Wishlist -------------------- */
-export const getWishlist = async (userId) => {
-  const response = await api.get(`/wishlist/${userId}`);
-  return response.data;
+const API_URL = "http://localhost:5000/api/wishlist";
+
+// Get wishlist for logged-in user
+export const getWishlist = async () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
+  if (!token) throw new Error("User not authenticated");
+
+  try {
+    const res = await axios.get(API_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Return wishlist object
+    return res.data;
+  } catch (err) {
+    console.error("Failed to fetch wishlist:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
-/* -------------------- Update or Create Wishlist -------------------- */
-export const updateWishlist = async (userId, products) => {
-  const response = await api.put(`/wishlist/${userId}`, { products });
-  return response.data;
+// Add product to wishlist
+export const addToWishlist = async (productId) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
+  if (!token) throw new Error("User not authenticated");
+
+  try {
+    const res = await axios.post(
+      `${API_URL}/add`,
+      { productId },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    // Return updated wishlist
+    return res.data;
+  } catch (err) {
+    console.error("Failed to add product to wishlist:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
-/* -------------------- Clear Wishlist -------------------- */
-export const clearWishlist = async (userId) => {
-  const response = await api.put(`/wishlist/clear/${userId}`);
-  return response.data;
-};
+// Remove product from wishlist
+export const removeFromWishlist = async (productId) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
+  if (!token) throw new Error("User not authenticated");
 
-/* -------------------- Add Product to Wishlist -------------------- */
-export const addToWishlist = async (userId, productId) => {
-  const response = await api.post(`/wishlist/add/${userId}`, { productId });
-  return response.data;
-};
-
-/* -------------------- Remove Product from Wishlist -------------------- */
-export const removeFromWishlist = async (userId, productId) => {
-  const response = await api.delete(`/wishlist/remove/${userId}/${productId}`);
-  return response.data;
+  try {
+    const res = await axios.delete(`${API_URL}/remove/${productId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Return updated wishlist
+    return res.data;
+  } catch (err) {
+    console.error("Failed to remove product from wishlist:", err.response?.data || err.message);
+    throw err;
+  }
 };

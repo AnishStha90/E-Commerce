@@ -1,15 +1,15 @@
-// routes/wishlistRoutes.js
 const express = require('express');
 const router = express.Router();
-const wishlistController = require('../controllers/wishlistController');
-const { protect, isUser } = require('../middleware/authMiddleware');
+const { protect, allowRoles } = require('../middleware/authMiddleware');
+const {
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist
+} = require('../controllers/wishlistController');
 
-// -------------------- User Wishlist Routes --------------------
-// All wishlist operations are for logged-in users only
-router.get('/:userId', protect, isUser, wishlistController.getWishlist);
-router.put('/:userId', protect, isUser, wishlistController.updateWishlist);
-router.delete('/clear/:userId', protect, isUser, wishlistController.clearWishlist);
-router.post('/add/:userId', protect, isUser, wishlistController.addToWishlist);
-router.delete('/remove/:userId/:productId', protect, isUser, wishlistController.removeFromWishlist);
+// All routes are protected and allowed for 'user' & 'vendor'
+router.get('/', protect, allowRoles('user', 'vendor'), getWishlist);
+router.post('/add', protect, allowRoles('user', 'vendor'), addToWishlist);
+router.delete('/remove/:productId', protect, allowRoles('user', 'vendor'), removeFromWishlist);
 
 module.exports = router;
